@@ -3,20 +3,28 @@ local M = {}
 local ghci_term_buf = nil
 local ghci_job_id = nil
 
+local tidal_boot = "~/TidalBoot.hs"
+
 local function _start_ghci()
-    -- Reuse if already running
+    -- Reuse if running
     if vim.g.ghci_job_id and vim.fn.jobwait({ vim.g.ghci_job_id }, 0)[1] == -1 then
         print("ghci already running")
         return
     end
 
-    vim.cmd("split")
-    local buf = vim.api.nvim_create_buf(false, true) -- scratch buffer
-    vim.api.nvim_win_set_buf(0, buf)
+    local current_win = vim.api.nvim_get_current_win()
 
-    local job_id = vim.fn.termopen({ "ghci" })
+    vim.cmd("belowright split")
+    local term_win = vim.api.nvim_get_current_win()
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_win_set_buf(term_win, buf)
+
+    local job_id = vim.fn.termopen({ "ghci", "-ghci-script", "MyScript.hs" })
     vim.g.ghci_job_id = job_id
     vim.b.ghci_buf = buf
+
+    -- Return focus to original window
+    vim.api.nvim_set_current_win(current_win)
 end
 
 
@@ -57,11 +65,10 @@ end
 -- Public APIs
 local plugin = {
     start_ghci = _start_ghci,
-    send_to_gchi = _send_to_ghci,
     end_ghci = _end_ghci
 }
 
-plugin.setup = function(opts)
+plugin.setup = function(opts_
     print("setup called")
 end
 
