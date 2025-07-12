@@ -85,12 +85,4 @@ end
 
 M.evaluate_block = evaluate_block
 
-
-M.evaluate_block = evaluate_block
-
-
-vim.api.nvim_create_user_command("TidalEvaluate", function()
-    require("nvim-tidal").evaluate_block()
-end, {})
-
 return M
