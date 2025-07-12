@@ -3,14 +3,14 @@ local M = {}
 local ghci_job_id = nil
 local ghci_buf = nil
 local config = {
-    boot_tidal = nil, -- default: not set
+    boot_tidal = nil,
 }
 
 function M.setup(opts)
     config = vim.tbl_deep_extend("force", config, opts or {})
 end
 
-function M._start_ghci()
+function M.start()
     if ghci_job_id and vim.fn.jobwait({ ghci_job_id }, 0)[1] == -1 then
         print("ghci already running")
         return
@@ -39,7 +39,7 @@ function M._start_ghci()
     vim.api.nvim_set_current_win(current_win)
 end
 
-function M._send_to_ghci(cmd)
+function M.send_to_tidal(cmd)
     if ghci_job_id and vim.fn.jobwait({ ghci_job_id }, 0)[1] == -1 then
         vim.api.nvim_chan_send(ghci_job_id, cmd .. "\n")
     else
@@ -47,7 +47,7 @@ function M._send_to_ghci(cmd)
     end
 end
 
-function M._end_ghci()
+function M.stop()
     if ghci_job_id and vim.fn.jobwait({ ghci_job_id }, 0)[1] == -1 then
         vim.fn.jobstop(ghci_job_id)
         print("ghci stopped")
@@ -62,5 +62,35 @@ function M._end_ghci()
     ghci_job_id = nil
     ghci_buf = nil
 end
+
+local function evaluate_block()
+    local start_line = vim.fn.search('^\\s*$', 'bnW') + 1
+    local end_line = vim.fn.search('^\\s*$', 'nW') - 1
+
+    if start_line < 1 then start_line = 1 end
+    if end_line < 1 then end_line = vim.fn.line('$') end
+
+    local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+    if #lines == 0 then
+        print("No code to send.")
+        return
+    end
+
+    table.insert(lines, 1, ":{")
+    table.insert(lines, ":}")
+
+    local code = table.concat(lines, "\n")
+    M.send_to_tidal(code)
+end
+
+M.evaluate_block = evaluate_block
+
+
+M.evaluate_block = evaluate_block
+
+
+vim.api.nvim_create_user_command("TidalEvaluate", function()
+    require("nvim-tidal").evaluate_block()
+end, {})
 
 return M
